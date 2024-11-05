@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "646479435316",
+    "project_id": "kappfari-9fe8d",
+    "storage_bucket": "kappfari-9fe8d.appspot.com"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:646479435316:android:b5f0f380246c2edf575c61",
+        "android_client_info": {
+          "package_name": "com.kappfari.app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCz5nlFxt4r7VuN3tfElN1luhom-wFv0O4"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
