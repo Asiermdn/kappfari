@@ -14,12 +14,31 @@ class HomeView extends StatefulWidget {
   _HomeViewState createState() => _HomeViewState();
 }
 
-class _HomeViewState extends State<HomeView> {
+class _HomeViewState extends State<HomeView> with WidgetsBindingObserver {
   final NutritionPlanService _nutritionPlanService = NutritionPlanService();
   final ConditioningPlanService _conditioningPlanService = ConditioningPlanService();
   NutritionPlan? _userNutritionPlan;
   ConditioningPlan? _userConditioningPlan;
   int _selectedIndex = 0;
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addObserver(this);
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      _fetchUserPlans();
+    }
+  }
 
   @override
   void didChangeDependencies() {
@@ -28,19 +47,62 @@ class _HomeViewState extends State<HomeView> {
   }
 
   Future<void> _fetchUserPlans() async {
-    final authViewModel = Provider.of<AuthViewModel>(context, listen: false);
-    final userId = authViewModel.currentUser?.id;
+    try {
+      final authViewModel = Provider.of<AuthViewModel>(context, listen: false);
+      final userId = authViewModel.currentUser?.id;
 
-    if (userId != null) {
-      final nutritionPlan = await _nutritionPlanService.getUserPlan(userId);
-      final conditioningPlan = await _conditioningPlanService.getUserPlan(userId);
+      if (userId != null) {
+        final nutritionPlan = await _nutritionPlanService.getUserPlan(userId);
+        final conditioningPlan = await _conditioningPlanService.getUserPlan(userId);
 
-      if (mounted) {
-        setState(() {
-          _userNutritionPlan = nutritionPlan;
-          _userConditioningPlan = conditioningPlan;
-        });
+        if (mounted) {
+          setState(() {
+            _userNutritionPlan = nutritionPlan;
+            _userConditioningPlan = conditioningPlan;
+          });
+        }
       }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error al cargar los planes: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
+  }
+
+  void _onNavigationItemSelected(int index) async {
+    setState(() {
+      _selectedIndex = index;
+    });
+
+    String route = '';
+    switch (index) {
+      case 0:
+        return;
+      case 1:
+        route = '/nutrition';
+        break;
+      case 2:
+        route = '/activity';
+        break;
+      case 3:
+        route = '/conditioning';
+        break;
+      case 4:
+        route = '/races';
+        break;
+    }
+
+    // Navegar a la ruta y esperar a que vuelva
+    final result = await Navigator.pushNamed(context, route);
+    
+    // Actualizar los planes cuando vuelve de la navegación
+    if (mounted) {
+      _fetchUserPlans();
     }
   }
 
@@ -63,11 +125,15 @@ class _HomeViewState extends State<HomeView> {
                 )
               ),
               TextButton(
-                onPressed: () {
-                  Navigator.pushNamed(
+                onPressed: () async {
+                  await Navigator.pushNamed(
                     context, 
                     title == 'Plan Nutricional' ? '/nutrition' : '/conditioning'
                   );
+                  // Actualizar los planes cuando vuelve del detalle
+                  if (mounted) {
+                    _fetchUserPlans();
+                  }
                 },
                 style: TextButton.styleFrom(
                   foregroundColor: theme.primaryColor,
@@ -156,57 +222,58 @@ class _HomeViewState extends State<HomeView> {
     final theme = Theme.of(context);
     
     return Scaffold(
-   appBar: AppBar(
-  elevation: 0,
-  title: Row(
-    mainAxisAlignment: MainAxisAlignment.center,
-    mainAxisSize: MainAxisSize.min,
-    children: [
-      Image.asset(
-        'assets/logo.png', // Asegúrate de que esta ruta corresponda al logo en tus assets
-        height: 24,
-        fit: BoxFit.contain,
-      ),
-      const SizedBox(width: 8),
-    
-    ],
-  ),
-  centerTitle: true, // Esto centra el contenido del AppBar
-  actions: [
-    Consumer<AuthViewModel>(
-      builder: (context, authViewModel, _) {
-        final profilePicture = authViewModel.currentUser?.profilePicture;
+      appBar: AppBar(
+        elevation: 0,
+        title: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Image.asset(
+              'assets/logo.png',
+              height: 24,
+              fit: BoxFit.contain,
+            ),
+            const SizedBox(width: 8),
+          ],
+        ),
+        centerTitle: true,
+        actions: [
+          Consumer<AuthViewModel>(
+            builder: (context, authViewModel, _) {
+              final profilePicture = authViewModel.currentUser?.profilePicture;
 
-        return GestureDetector(
-          onTap: () {
-            Navigator.pushNamed(context, '/profile');
-          },
-          child: Container(
-            margin: const EdgeInsets.only(right: 16),
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              border: Border.all(
-                color: Colors.white,
-                width: 2,
-              ),
-            ),
-            child: CircleAvatar(
-              radius: 16,
-              backgroundImage: profilePicture != null
-                  ? NetworkImage(profilePicture)
-                  : null,
-              child: profilePicture == null
-                  ? const Icon(Icons.person, color: Colors.pinkAccent, size: 20)
-                  : null,
-            ),
+              return GestureDetector(
+                onTap: () async {
+                  await Navigator.pushNamed(context, '/profile');
+                  // Actualizar los planes cuando vuelve del perfil
+                  if (mounted) {
+                    _fetchUserPlans();
+                  }
+                },
+                child: Container(
+                  margin: const EdgeInsets.only(right: 16),
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    border: Border.all(
+                      color: Colors.white,
+                      width: 2,
+                    ),
+                  ),
+                  child: CircleAvatar(
+                    radius: 16,
+                    backgroundImage: profilePicture != null
+                        ? NetworkImage(profilePicture)
+                        : null,
+                    child: profilePicture == null
+                        ? const Icon(Icons.person, color: Colors.pinkAccent, size: 20)
+                        : null,
+                  ),
+                ),
+              );
+            },
           ),
-        );
-      },
-    ),
-  ],
-),
-
-
+        ],
+      ),
       body: RefreshIndicator(
         color: theme.primaryColor,
         onRefresh: _fetchUserPlans,
@@ -238,26 +305,7 @@ class _HomeViewState extends State<HomeView> {
         ),
         child: BottomNavigationBar(
           currentIndex: _selectedIndex,
-          onTap: (index) {
-            setState(() {
-              _selectedIndex = index;
-            });
-            switch (index) {
-              case 0: break;
-              case 1:
-                Navigator.pushNamed(context, '/nutrition');
-                break;
-              case 2:
-                Navigator.pushNamed(context, '/activity');
-                break;
-              case 3:
-                Navigator.pushNamed(context, '/conditioning');
-                break;
-              case 4:
-                Navigator.pushNamed(context, '/races');
-                break;
-            }
-          },
+          onTap: _onNavigationItemSelected,
           type: BottomNavigationBarType.fixed,
           selectedItemColor: theme.primaryColor,
           unselectedItemColor: Colors.grey[400],

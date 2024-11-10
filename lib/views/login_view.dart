@@ -54,13 +54,13 @@ class _LoginViewState extends State<LoginView> {
                 children: [
                   // Logo o título
                   Text(
-                    'Welcome Back!',
+                    'Bienvenido!',
                     style: Theme.of(context).textTheme.displayLarge,
                     textAlign: TextAlign.center,
                   ),
                   const SizedBox(height: 8),
                   Text(
-                    'Please sign in to continue',
+                    'Por favor inicia sesión para continuar',
                     style: Theme.of(context).textTheme.bodyLarge?.copyWith(color: Colors.grey),
                     textAlign: TextAlign.center,
                   ),
@@ -101,7 +101,7 @@ class _LoginViewState extends State<LoginView> {
                         controller: passwordController,
                         obscureText: _obscureText,
                         decoration: InputDecoration(
-                          labelText: 'Password',
+                          labelText: 'Contraseña',
                           border: InputBorder.none,
                           icon: Icon(Icons.lock_outline, color: Colors.pinkAccent),
                           errorText: authViewModel.errorMessage,
@@ -142,7 +142,7 @@ class _LoginViewState extends State<LoginView> {
                             ),
                           ),
                           child: const Text(
-                            'Sign In',
+                            'Entrar',
                             style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
                           ),
                         ),
@@ -153,7 +153,7 @@ class _LoginViewState extends State<LoginView> {
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
                       Text(
-                        "Don't have an account? ",
+                        "No tienes cuenta? ",
                         style: Theme.of(context).textTheme.bodyLarge,
                       ),
                       TextButton(
@@ -161,7 +161,7 @@ class _LoginViewState extends State<LoginView> {
                           Navigator.pushNamed(context, '/register');
                         },
                         child: const Text(
-                          "Register",
+                          "Registro",
                           style: TextStyle(
                             color: Colors.pinkAccent,
                             fontWeight: FontWeight.bold,

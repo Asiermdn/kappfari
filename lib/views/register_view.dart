@@ -46,13 +46,13 @@ class _RegisterViewState extends State<RegisterView> {
                   children: [
                     // Título y subtítulo
                     Text(
-                      'Create Account',
+                      'Crear cuenta',
                       style: Theme.of(context).textTheme.displayLarge,
                       textAlign: TextAlign.center,
                     ),
                     const SizedBox(height: 8),
                     Text(
-                      'Please fill in the form to continue',
+                      'Por favor rellena el formulario para continuar',
                       style: Theme.of(context).textTheme.bodyLarge?.copyWith(color: Colors.grey),
                       textAlign: TextAlign.center,
                     ),
@@ -70,7 +70,7 @@ class _RegisterViewState extends State<RegisterView> {
                         child: TextField(
                           controller: nameController,
                           decoration: InputDecoration(
-                            labelText: 'Full Name',
+                            labelText: 'Nombre',
                             border: InputBorder.none,
                             icon: Icon(Icons.person_outline, color: Colors.pinkAccent),
                           ),
@@ -114,7 +114,7 @@ class _RegisterViewState extends State<RegisterView> {
                           controller: passwordController,
                           obscureText: _obscureText,
                           decoration: InputDecoration(
-                            labelText: 'Password',
+                            labelText: 'Contraseña',
                             border: InputBorder.none,
                             icon: Icon(Icons.lock_outline, color: Colors.pinkAccent),
                             errorText: authViewModel.errorMessage,
@@ -148,7 +148,7 @@ class _RegisterViewState extends State<RegisterView> {
                           controller: confirmPasswordController,
                           obscureText: _obscureConfirmText,
                           decoration: InputDecoration(
-                            labelText: 'Confirm Password',
+                            labelText: 'Confirmar contraseña',
                             border: InputBorder.none,
                             icon: Icon(Icons.lock_outline, color: Colors.pinkAccent),
                             suffixIcon: IconButton(
@@ -197,7 +197,7 @@ class _RegisterViewState extends State<RegisterView> {
                               ),
                             ),
                             child: const Text(
-                              'Create Account',
+                              'Crear cuenta',
                               style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
                             ),
                           ),
@@ -208,7 +208,7 @@ class _RegisterViewState extends State<RegisterView> {
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
                         Text(
-                          "Already have an account? ",
+                          "Ya tienes cuenta? ",
                           style: Theme.of(context).textTheme.bodyLarge,
                         ),
                         TextButton(
