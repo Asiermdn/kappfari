@@ -1,10 +1,16 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:http/http.dart' as http;
+import 'dart:convert';
 import '../models/nutrition_plan_model.dart';
 
 class NutritionPlanService {
   final FirebaseFirestore _db = FirebaseFirestore.instance;
+  final String _apiKey= 'AIzaSyBXYqUKipUHkitLAGjmxZr_yJwB0IF4fws'; // Tu API key de Google
+  static const String _apiUrl = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent';
 
-  // Obtener el plan de nutrición del usuario desde Firestore
+ NutritionPlanService(); 
+
+  // Obtener el plan de nutrición del usuario
   Future<NutritionPlan?> getUserPlan(String userId) async {
     try {
       DocumentSnapshot<Map<String, dynamic>> doc = await _db
@@ -22,10 +28,11 @@ class NutritionPlanService {
     }
   }
 
-  // Obtener todos los planes de nutrición
+  // Obtener todos los planes
   Future<List<NutritionPlan>> getAllNutritionPlans() async {
     try {
-      QuerySnapshot<Map<String, dynamic>> querySnapshot = await _db.collection('nutritionPlans').get();
+      QuerySnapshot<Map<String, dynamic>> querySnapshot = 
+          await _db.collection('nutritionPlans').get();
       List<NutritionPlan> plans = [];
 
       for (var doc in querySnapshot.docs) {
@@ -39,63 +46,132 @@ class NutritionPlanService {
     }
   }
 
-  // Eliminar el plan de nutrición del usuario en Firestore
+  // Eliminar plan
   Future<void> deleteUserPlan(String userId) async {
     try {
       await _db.collection('nutritionPlans').doc(userId).delete();
     } catch (e) {
       print("Error al eliminar el plan nutricional: ${e.toString()}");
+      throw Exception("Error al eliminar el plan nutricional: ${e.toString()}");
     }
   }
 
-  // Crear un nuevo plan nutricional para el usuario
-  Future<void> createNutritionPlan(String userId, Map<String, dynamic> inputData) async {
+  // Crear nuevo plan usando IA
+  Future<void> createNutritionPlan(String userId, Map<String, dynamic> userData) async {
     try {
-      // Aquí iría la llamada a la API de IA para generar el plan
-      Map<String, dynamic> generatedPlan = await _callAIService(inputData);
-
-      // Crear una instancia de NutritionPlan para estructurar los datos
-      NutritionPlan nutritionPlan = NutritionPlan(
-        id: userId,
-        goal: generatedPlan['goal'],
-        description: null, // Puedes agregar una descripción si lo deseas
-        dailyMeals: _formatMealPlan(generatedPlan),
+      // Generar el plan usando IA
+      final aiResponse = await _generateAIPlan(userData);
+      
+      // Convertir la respuesta de la IA a nuestro modelo
+      final nutritionPlan = await _convertAIResponseToNutritionPlan(
+        userId: userId,
+        aiResponse: aiResponse,
+        goal: userData['goal'],
       );
 
-      // Guardar el plan generado en Firestore, usando el userId como ID del documento
-      await _db.collection('nutritionPlans').doc(userId).set(nutritionPlan.toMap());
+      // Guardar en Firestore
+      await _db.collection('nutritionPlans')
+          .doc(userId)
+          .set(nutritionPlan.toMap());
+
     } catch (e) {
       print("Error al crear el plan nutricional: ${e.toString()}");
+      throw Exception("Error al crear el plan nutricional: ${e.toString()}");
     }
   }
 
-  // Simulación de llamada a un servicio de IA para generar el plan de nutrición
-  Future<Map<String, dynamic>> _callAIService(Map<String, dynamic> inputData) async {
-    // Lógica simulada o llamada real a API de IA
-    await Future.delayed(const Duration(seconds: 2)); // Simula tiempo de espera de la IA
+  Future<String> _generateAIPlan(Map<String, dynamic> userData) async {
+    try {
+      final prompt = '''
+        Actúa como un nutricionista experto y genera un plan nutricional detallado para una persona con las siguientes características:
+        - Peso: ${userData['weight']} kg
+        - Altura: ${userData['height']} cm
+        - Edad: ${userData['age']} años
+        - Objetivo: ${userData['goal']}
+        - Duración del plan: ${userData['days']} días
 
-    // Resultado simulado de la IA
-    return {
-      'goal': inputData['goal'],
-      'days': inputData['days'],
-      'dailyCalories': 2000,
-      'mealPlan': [
-        {'meal': 'Desayuno', 'description': 'Avena con frutas y yogurt'},
-        {'meal': 'Almuerzo', 'description': 'Pechuga de pollo con verduras'},
-        {'meal': 'Cena', 'description': 'Sopa de verduras y pescado'},
-      ],
-    };
+        Por favor, genera un plan que incluya:
+        1. Calorías diarias recomendadas
+        2. 3 comidas principales por día (desayuno, almuerzo y cena)
+        3. Lista detallada de comidas para cada día
+        4. Considera el objetivo específico al generar las comidas
+
+        IMPORTANTE: Responde en el siguiente formato JSON:
+        {
+          "calories": número_de_calorías,
+          "days": {
+            "1": ["desayuno_día_1", "almuerzo_día_1", "cena_día_1"],
+            "2": ["desayuno_día_2", "almuerzo_día_2", "cena_día_2"],
+            ...
+          }
+        }
+      ''';
+
+      final response = await http.post(
+        Uri.parse('$_apiUrl?key=$_apiKey'),
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: jsonEncode({
+          'contents': [{
+            'parts': [{
+              'text': prompt
+            }]
+          }],
+          'generationConfig': {
+            'temperature': 0.7,
+            'topK': 40,
+            'topP': 0.95,
+            'maxOutputTokens': 1024,
+          },
+        }),
+      );
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        return data['candidates'][0]['content']['parts'][0]['text'];
+      } else {
+        print('Error de la API: ${response.body}');
+        throw Exception('Error al generar el plan nutricional');
+      }
+    } catch (e) {
+      print('Error detallado: $e');
+      throw Exception('Error en la generación del plan: $e');
+    }
   }
 
-  // Formatear el plan de comidas al nuevo formato de dailyMeals
-  Map<int, List<String>> _formatMealPlan(Map<String, dynamic> generatedPlan) {
-    final Map<int, List<String>> meals = {};
-    final List<dynamic> mealPlan = generatedPlan['mealPlan'];
+  Future<NutritionPlan> _convertAIResponseToNutritionPlan({
+    required String userId,
+    required String aiResponse,
+    required String goal,
+  }) async {
+    try {
+      // Eliminar cualquier texto antes o después del JSON
+      final jsonStr = aiResponse.substring(
+        aiResponse.indexOf('{'),
+        aiResponse.lastIndexOf('}') + 1
+      );
+      
+      final Map<String, dynamic> aiData = jsonDecode(jsonStr);
+      
+      // Convertir el formato de días al formato esperado por NutritionPlan
+      final Map<int, List<String>> dailyMeals = {};
+      
+      (aiData['days'] as Map<String, dynamic>).forEach((day, meals) {
+        dailyMeals[int.parse(day)] = List<String>.from(meals);
+      });
 
-    for (int day = 1; day <= generatedPlan['days']; day++) {
-      meals[day] = mealPlan.map<String>((meal) => meal['description'] as String).toList();
+      // Crear y retornar el plan de nutrición
+      return NutritionPlan(
+        id: userId,
+        goal: goal,
+        description: 'Plan nutricional personalizado - ${aiData['calories']} calorías diarias',
+        dailyMeals: dailyMeals,
+      );
+
+    } catch (e) {
+      print('Error al convertir la respuesta de la IA: $e');
+      throw Exception('Error al procesar la respuesta de la IA');
     }
-
-    return meals;
   }
 }
